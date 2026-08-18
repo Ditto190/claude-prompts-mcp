@@ -82,8 +82,8 @@ resource_manager(resource_type:"prompt", action:"push", workspace:"team-acme")
 
 | Area                 | Now       | Target                   | Plan                                                                                |
 | -------------------- | --------- | ------------------------ | ----------------------------------------------------------------------------------- |
-| Test coverage        | Unit only | Unit + Integration + E2E | [test-modernization-roadmap](../plans/techincal_debt/test-modernization-roadmap.md) |
-| Coverage enforcement | None      | 80% threshold            | [test-modernization-roadmap](../plans/techincal_debt/test-modernization-roadmap.md) |
+| Test coverage        | Unit only | Unit + Integration + E2E | [test-modernization-roadmap](../plans/reference/techincal_debt/test-modernization-roadmap.md) |
+| Coverage enforcement | None      | 80% threshold            | [test-modernization-roadmap](../plans/reference/techincal_debt/test-modernization-roadmap.md) |
 | TypeScript strict    | Full      | Keep strict enabled      | -                                                                                   |
 | Bundle size          | ~4.5MB    | < 2MB (tree-shaking)     | -                                                                                   |
 
@@ -115,7 +115,7 @@ Found 2026-07-28 while authoring a prompt with `inline_gate_definitions`. All re
 
 ### Test Modernization
 
-See [test-modernization-roadmap.md](../plans/techincal_debt/test-modernization-roadmap.md) for the comprehensive 6-phase plan:
+See [test-modernization-roadmap.md](../plans/reference/techincal_debt/test-modernization-roadmap.md) for the comprehensive 6-phase plan:
 
 - [ ] **Phase 1**: Coverage infrastructure (thresholds, CI, helpers)
 - [ ] **Phase 2**: Test classification audit & migration (8 sub-phases analyzing all 67 test files)
