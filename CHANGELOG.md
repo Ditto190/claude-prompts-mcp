@@ -7,25 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [4.0.0](https://github.com/Ditto190/claude-prompts-mcp/compare/v4.0.1...v4.0.0) (2026-08-18)
 
-
-### ⚠ BREAKING CHANGES
-
-* **execution:** the rendered ==> handoff text — a client-observable prompt surface — changes shape entirely (brief-at-resume replaces CTA-at-preview).
-* **mcp-tools:** `system_control(action:"session", operation:"cancel")` is removed; call `prompt_engine(chain_id:"...", cancel:true)` instead. The removed operation now refuses with a message naming the replacement rather than reporting an unknown operation. `resource_manager` additionally accepts `source_workspace`. Both alter the reachable-shape union of the MCP tool surface, which this repository's Public API Contract prices as breaking.
-* **prompts:** chain steps are validated strictly. A key with no schema field now fails the prompt's load, naming the key and its step index, instead of being silently discarded.
-* **mcp-tools:** `resource_manager(resource_type: "prompt", action: "delete")` now requires `confirm: true`, and the `checkpoint` resource type and `clear` action are removed from the tool surface.
-* **chains:** schema v20 renames chain_sessions.tenant_id and chain_run_registry.tenant_id to run_owner_pid, and drops `lifecycle` from v_execution_status. Both tables are derived/ephemeral and are dropped by the bump, so no data migrates.
-* **runtime:** `--transport=sse` and `transport: "sse"` in config.json are rejected at startup rather than silently resolved to another transport. Use `streamable-http`.
-* **runtime:** The deprecated HTTP+SSE transport is removed; use `--transport=streamable-http`. The Streamable HTTP transport no longer issues or requires an `Mcp-Session-Id` header.
-* **deps:** the published MCP inputSchema changed in 39 places. The SDK picks its JSON Schema converter from the installed zod major (zod-json-schema-compat.js:19-28), so this bump swaps the engine that produces the tool surface CLAUDE.md places inside the Public API Contract. The plan pre-committed the rule "empty diff -> minor, non-empty -> major" before the diff was taken; it is non-empty.
-* **server:** the project is re-licensed from AGPL-3.0-only to MIT. Network use of modified versions no longer triggers the source-disclosure obligation of AGPL section 13; MIT imposes attribution only. Skills already exported by `skills:export` carry the old AGPL-3.0-only license field and must be regenerated to pick up MIT.
-* **mcp-tools:** resource_manager parameter `methodology` is now `framework`; FrameworkCreationData.methodology removed and `type` is now required.
-* **frameworks:** FrameworkDefinition.methodology removed; use `type`.
-* resource://methodology/ is now resource://framework/.
-* **prompts:** `>>create_methodology` is now `>>create_framework`.
-
 ### Added
 
+- **`dry_run` previews `rollback` and `delete`** on prompts, gates and frameworks, in addition to prompt `update`. A preview writes no file and records no version, and still refuses a version whose snapshot is incomplete, so the preview and the real call agree. A `delete` preview names what would be removed — for a prompt, the prompts that reference it.
+- **`resource_manager` and `system_control` advertise `destructiveHint`**, and `prompt_engine` advertises that it is not destructive, so clients can gate destructive actions where the operator is.
+- **Phase-guard section headers are now declared to the model, derived live from `phases.yaml`.** Chain steps and gated single prompts (any prompt carrying an explicit `gates` parameter, a `gate` operator, or `chainSteps`) render the section-header vocabulary — and the declarable subset of its guard criteria (`contains_any`, `contains_all`, `max_length`) — from the same source the phase-guard evaluator grades against, replacing five hand-maintained prompt copies as the source of truth. Negative criteria (`forbidden_terms`, `matches_pattern`) are never declared to the model; the type system rejects a criterion that tries. A framework that declares `guards` on a phase with no `section_header` is now refused at load, naming the offending phase. `validate:phase-header-drift` catches a prompt file that restates a header its framework no longer declares.
 * agent-plugins migration, codex fleet integration, and brand system for 4.0.0 ([3d402fe](https://github.com/Ditto190/claude-prompts-mcp/commit/3d402feaa6da083170b0c358c4ae9405d20ce1f3))
 * **chains:** add per-run unknowns ledger via prompt_engine observations param ([0bdbfbe](https://github.com/Ditto190/claude-prompts-mcp/commit/0bdbfbe24a41986c519dd56907d5ffaf022fce05))
 * **chains:** add record-only per-run telemetry to execution_records ([2e84bb3](https://github.com/Ditto190/claude-prompts-mcp/commit/2e84bb3cf809698bbb9044055f84b35777bc8ebd))
@@ -84,9 +70,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **server:** ship the cpm CLI as a second bin ([f9d9ec2](https://github.com/Ditto190/claude-prompts-mcp/commit/f9d9ec25b6bd6315a8f6948ee38dc30771ff4bed))
 * **server:** unify contract-surface vocabulary on framework, add recurrence guard ([6b5b27a](https://github.com/Ditto190/claude-prompts-mcp/commit/6b5b27a9a952b0faacd61cbbf7ddaec2090cfc2f))
 
+### Changed
+
+- **Destructive `resource_manager` actions are denied by one guard** ahead of dispatch rather than by six hand-written checks across the processors. `prompt delete` keeps its own refusal because that one names the dependent prompts that would break.
+* **chains:** give the chain run-identifier format one owner ([f4ad2a1](https://github.com/Ditto190/claude-prompts-mcp/commit/f4ad2a182e60001f44cf88a509ae60819a25433e))
+* **chains:** remove unreachable cap-widening branch from workflow-ir validator ([e557766](https://github.com/Ditto190/claude-prompts-mcp/commit/e55776644d6fd212e3f2c1bfd7ac1e0730981cd0))
+* **chains:** rename tenant_id to run_owner_pid and repair the view that never read it ([a0dc36f](https://github.com/Ditto190/claude-prompts-mcp/commit/a0dc36f261763efa2ad23a7264d5534aa3745b76))
+* **ci:** route validation by change impact ([#183](https://github.com/Ditto190/claude-prompts-mcp/issues/183)) ([c7509c2](https://github.com/Ditto190/claude-prompts-mcp/commit/c7509c2b56e9266d9ac0c70dd8f2c89f6e3f3f19))
+* **execution:** drop six ConvertedPrompt fields no producer ever set ([d66356a](https://github.com/Ditto190/claude-prompts-mcp/commit/d66356aece725569627b536eaaafb55a0a82de07))
+* **execution:** give auto-approve partitioning to the filter that already partitions ([15270fd](https://github.com/Ditto190/claude-prompts-mcp/commit/15270fd045668af006c434223498127646ea5bcb))
+* **frameworks:** delete the enableArgumentSuggestions flag ([4738763](https://github.com/Ditto190/claude-prompts-mcp/commit/47387639708aa1ee7284a8b2d2afd89e63f1b0a9))
+* **frameworks:** move methodology-named files and directories ([12d2470](https://github.com/Ditto190/claude-prompts-mcp/commit/12d2470e587a2c341169f0113d1064ddf4225559))
+* **frameworks:** rename internal methodology identifiers to framework ([4c49340](https://github.com/Ditto190/claude-prompts-mcp/commit/4c4934022cc574190100c6e44988c099b92dc3e2))
+* **frameworks:** rename methodology to framework in comment prose ([ffd1033](https://github.com/Ditto190/claude-prompts-mcp/commit/ffd1033612120a753b2c4fb69227222b057aefd1))
+* **frameworks:** rename the 16 exported Methodology* symbols ([7d16376](https://github.com/Ditto190/claude-prompts-mcp/commit/7d16376f5ecc9bcc6f4a314b99a8d1208788c959))
+* **frameworks:** retire FrameworkDefinition.methodology ([a5ef404](https://github.com/Ditto190/claude-prompts-mcp/commit/a5ef4043e23ee955209908694b012ac7d9983b88))
+* **frameworks:** retire the pre-rename methodology back-compat folds ([05b6efc](https://github.com/Ditto190/claude-prompts-mcp/commit/05b6efcb89bccc012a1fe0bc1f95f72ab80addee))
+* **frameworks:** route fallback defaults through DEFAULT_FRAMEWORK_ID ([b41adc4](https://github.com/Ditto190/claude-prompts-mcp/commit/b41adc438cd577e22663550c1055747f8fce761a))
+* **gates:** delete the gate retry re-entry API, which had no callers ([7a43f99](https://github.com/Ditto190/claude-prompts-mcp/commit/7a43f996d4d822391d8f271bcf0a253c82198a71))
+* **gates:** delete the unreachable enforcement-decision cache ([335a8b6](https://github.com/Ditto190/claude-prompts-mcp/commit/335a8b6801431804b724c8321d16bd3e97c47f8a))
+* **gates:** move the shell-verify clearing decision to its owner module ([20b795e](https://github.com/Ditto190/claude-prompts-mcp/commit/20b795e7364032e8658d2b5a675c22ca00c238b6))
+* **mcp-tools:** delete the dead ContextBuilder rather than consolidate it ([05ab145](https://github.com/Ditto190/claude-prompts-mcp/commit/05ab145e26b6fda7b4aaccb3f0add62085806922))
+* **mcp-tools:** delete the system_control tool-description sink ([0ad5769](https://github.com/Ditto190/claude-prompts-mcp/commit/0ad5769ec65043aa0ccb64226ba486ae9adabd70))
+* **mcp-tools:** drop dead wiring from the tool constructor seams ([6642c04](https://github.com/Ditto190/claude-prompts-mcp/commit/6642c049586b6ac7990fa5b133c6d0f080de4e39))
+* **mcp-tools:** drop unreachable saveVersion failure branch ([d2d7724](https://github.com/Ditto190/claude-prompts-mcp/commit/d2d77245d02e25a19e90a622c5ce37cc9b2a3b9c))
+* **pipeline:** construct the pipeline from an ordered stage array ([094baec](https://github.com/Ditto190/claude-prompts-mcp/commit/094baec62523e99ae86f73191661696e81917f95))
+* **pipeline:** delete DependencyInjectionStage and the metadata bag ([af8401a](https://github.com/Ditto190/claude-prompts-mcp/commit/af8401ada25dea7e827a9409647a127f1d43d21a))
+* **pipeline:** delete the two judge-selection channels that never had a producer ([76630b7](https://github.com/Ditto190/claude-prompts-mcp/commit/76630b735f6ac8dd7df5a43c2fb7633e355de2cb))
+* **pipeline:** drain the execution context metadata bag to one key ([b29dff2](https://github.com/Ditto190/claude-prompts-mcp/commit/b29dff2b422252695d56d54b45a682d29687be0f))
+* **pipeline:** enforce stage ordering invariants at construction ([f858306](https://github.com/Ditto190/claude-prompts-mcp/commit/f8583060deba345a033610a199722314fe706d2b))
+* **pipeline:** extract execution metric payload derivation ([b840472](https://github.com/Ditto190/claude-prompts-mcp/commit/b84047203d3ff0b3aefe0df30775608899bc3fc7))
+* **pipeline:** move framework-requirement predicates out of the stage ([a25aaf2](https://github.com/Ditto190/claude-prompts-mcp/commit/a25aaf256395c20ab04bab7ed0327a9ac504ffde))
+* **pipeline:** renumber the 22 stage files to execution order ([467ee5a](https://github.com/Ditto190/claude-prompts-mcp/commit/467ee5a45bb0d4293907f8267258bae1900b26b4))
+* **pipeline:** stop deriving the framework requirement twice ([6479ab1](https://github.com/Ditto190/claude-prompts-mcp/commit/6479ab155fbdba62ab16f924ec685142d0487901))
+* **prompts:** rename create_methodology to create_framework ([7d1c32e](https://github.com/Ditto190/claude-prompts-mcp/commit/7d1c32e6d291a746f750a3d3010e5cb51f269bb7))
+* **remotion:** rename methodology to framework in the tutorial video ([5808785](https://github.com/Ditto190/claude-prompts-mcp/commit/5808785258cb25d900188efb6deb9cd42f0fb682))
+* **runtime:** express the version_history cleanup as a schema bump, not resident code ([92b1dcd](https://github.com/Ditto190/claude-prompts-mcp/commit/92b1dcda8b7053bbbb1ec5ca9c760cf3da26e8a8))
+* **runtime:** extract list-change routing and cover both transports ([0f5437f](https://github.com/Ditto190/claude-prompts-mcp/commit/0f5437f6b3f912d3fd447bfd052510f138f602c9))
+* **scripts:** port no-crosslayer-relative to dependency-cruiser and retire the guard ([3837b91](https://github.com/Ditto190/claude-prompts-mcp/commit/3837b919bd938891d48a22ade6e082175c9c70e3))
+* **scripts:** retire four guards, re-home them, and share one definition of a live exception ([c4b920b](https://github.com/Ditto190/claude-prompts-mcp/commit/c4b920ba1ce8b885e5d6689d6dbed34225740392))
+* **scripts:** scope shipped-content gates by git, not filesystem walk ([8468c4a](https://github.com/Ditto190/claude-prompts-mcp/commit/8468c4a23891b409feace816f30837c1de088c40))
+* **server:** delete 11 unreachable types and the analyzer's unread config ([558e4dc](https://github.com/Ditto190/claude-prompts-mcp/commit/558e4dc8c8864f5c19e5b1e2606b73ff34934aa1))
+* **server:** delete the last nine unreachable types in shared/types ([675095f](https://github.com/Ditto190/claude-prompts-mcp/commit/675095fa5ff9389b25e2a923f5cc10fc16f327bc))
+* **server:** land finalized pipeline and framework remediation ([67e905e](https://github.com/Ditto190/claude-prompts-mcp/commit/67e905e49f2bfc8b045b7aa787738e70496fe75e))
+* **server:** migrate cross-layer imports to package.json subpath imports ([901081a](https://github.com/Ditto190/claude-prompts-mcp/commit/901081a144d9c79f5a5a4808f3bbd50d90cf4e65))
+* **server:** name the script-tool filter for triggers, not the retired mode field ([3ef5411](https://github.com/Ditto190/claude-prompts-mcp/commit/3ef541191de7c7ef90bfd4eaa50e83b54b7959af))
+* **server:** remove the 76 dead symbols the unused-locals sweep reported ([31dd755](https://github.com/Ditto190/claude-prompts-mcp/commit/31dd7555f39c1d72e675ad7ec3410ac172c38798))
+* **server:** retire the semantic LLM side client, which never ran here ([d219f8b](https://github.com/Ditto190/claude-prompts-mcp/commit/d219f8b75a982669142d301cae0512c272415ce3))
+* **server:** subpath imports + declared public API contract ([b05a181](https://github.com/Ditto190/claude-prompts-mcp/commit/b05a1815b9e13292fa97c8b03877435a412bd9fb))
+* **server:** type McpToolRouter's mcpServer as McpServer ([2ddd763](https://github.com/Ditto190/claude-prompts-mcp/commit/2ddd763fc46977631633b62572d31c2fa19fb67d))
+* **server:** type TransportRouter's mcpServer as McpServer ([4feaab2](https://github.com/Ditto190/claude-prompts-mcp/commit/4feaab29e93698eb24865f7dc924db48f4288eaa))
 
 ### Fixed
 
+- **A phase guard can no longer block on a section header the executing prompt was never told to produce.** Previously the guard graded every `phases.yaml` header regardless of whether the rendered prompt actually asked for it, so a header rename in `phases.yaml` silently created an unsatisfiable review loop — reproduced live on this repository's own planning chain. A header the prompt did not declare is now advisory only; enforcement of a declared-and-missing header is unchanged.
+- **Gate and framework version history now records the state each edit produced**, matching prompts. Previously version N held the state edit N _replaced_, so the state currently on disk was recorded in no row at all and was not rollback-reachable until the next edit. A self-healing bridge row carries existing rows across the change with no migration.
+- **Rollback restores the recorded snapshot exactly instead of merging current values into it.** A version whose snapshot cannot rebuild the resource is now refused, naming the missing fields; substituting the live value landed the resource on a state matching neither the target version nor the state before it, under a message saying version N had been restored. Where a rollback legitimately leaves part of a resource untouched — fields resolved through the category chain, a framework field the version never recorded, script tools under `tools/{id}/` — the response now names what it did not restore.
+- **A rollback refused for any reason no longer writes version rows.** Rollback runs validate → record → write, with recording ahead of the file write so a persistence failure aborts with nothing on disk.
+- **A gate or framework edit no longer writes a spurious bridge row every time.** Snapshot projections are emitted in a canonical key order, because the bridge check is `JSON.stringify` equality and was therefore order-sensitive; steady state is one row per edit again.
+- **`cpm rollback` no longer destroys resource fields.** It wrote the recorded snapshot as the entire entry YAML, so rolling a gate back through the CLI deleted `pass_criteria`, `retry_config`, `activation` and `guidanceFile` and injected a bogus `guidance` key — the CLI and the server produced different files from the same version. The snapshot is now merged over what is on disk, and `cpm rollback style` is refused up front rather than cast into a resource type that has no version history.
+- **`resource_manager framework update description:"…"` was a silent no-op.** The value was accepted, diffed and reported, but never written; the old description survived because the framework writer merges over the existing YAML.
 * adaptive-chain-runtime residuals sweep ([ba03839](https://github.com/Ditto190/claude-prompts-mcp/commit/ba03839ec552be178fdd1f6628efdde9d529f26b))
 * **chains:** sync cpm rollback onto go-forward version numbering ([2e15f0c](https://github.com/Ditto190/claude-prompts-mcp/commit/2e15f0c5305c63414643a849e4bdc9742d917d50))
 * **ci:** allow Renovate validator to inspect updates ([927a816](https://github.com/Ditto190/claude-prompts-mcp/commit/927a816e4ae27784cc0dffc017d8309d339d1cf6))
@@ -202,58 +245,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **server:** survive EPIPE when a shell_verify child ignores stdin ([5bb0d05](https://github.com/Ditto190/claude-prompts-mcp/commit/5bb0d0502dccb26bc1661d15198ef0b85ea7bee2))
 * **server:** version history records what an edit produced, not what it replaced (P7 T2) ([08b001f](https://github.com/Ditto190/claude-prompts-mcp/commit/08b001f2c2af20d37734a3066e45c6fc1527b232))
 * **tests:** cover the two new tool parameters and align gates with merged reality ([d156038](https://github.com/Ditto190/claude-prompts-mcp/commit/d156038e22507e1c18460da85bdcd7e76892ffd9))
-
-
-### Changed
-
-* **chains:** give the chain run-identifier format one owner ([f4ad2a1](https://github.com/Ditto190/claude-prompts-mcp/commit/f4ad2a182e60001f44cf88a509ae60819a25433e))
-* **chains:** remove unreachable cap-widening branch from workflow-ir validator ([e557766](https://github.com/Ditto190/claude-prompts-mcp/commit/e55776644d6fd212e3f2c1bfd7ac1e0730981cd0))
-* **chains:** rename tenant_id to run_owner_pid and repair the view that never read it ([a0dc36f](https://github.com/Ditto190/claude-prompts-mcp/commit/a0dc36f261763efa2ad23a7264d5534aa3745b76))
-* **ci:** route validation by change impact ([#183](https://github.com/Ditto190/claude-prompts-mcp/issues/183)) ([c7509c2](https://github.com/Ditto190/claude-prompts-mcp/commit/c7509c2b56e9266d9ac0c70dd8f2c89f6e3f3f19))
-* **execution:** drop six ConvertedPrompt fields no producer ever set ([d66356a](https://github.com/Ditto190/claude-prompts-mcp/commit/d66356aece725569627b536eaaafb55a0a82de07))
-* **execution:** give auto-approve partitioning to the filter that already partitions ([15270fd](https://github.com/Ditto190/claude-prompts-mcp/commit/15270fd045668af006c434223498127646ea5bcb))
-* **frameworks:** delete the enableArgumentSuggestions flag ([4738763](https://github.com/Ditto190/claude-prompts-mcp/commit/47387639708aa1ee7284a8b2d2afd89e63f1b0a9))
-* **frameworks:** move methodology-named files and directories ([12d2470](https://github.com/Ditto190/claude-prompts-mcp/commit/12d2470e587a2c341169f0113d1064ddf4225559))
-* **frameworks:** rename internal methodology identifiers to framework ([4c49340](https://github.com/Ditto190/claude-prompts-mcp/commit/4c4934022cc574190100c6e44988c099b92dc3e2))
-* **frameworks:** rename methodology to framework in comment prose ([ffd1033](https://github.com/Ditto190/claude-prompts-mcp/commit/ffd1033612120a753b2c4fb69227222b057aefd1))
-* **frameworks:** rename the 16 exported Methodology* symbols ([7d16376](https://github.com/Ditto190/claude-prompts-mcp/commit/7d16376f5ecc9bcc6f4a314b99a8d1208788c959))
-* **frameworks:** retire FrameworkDefinition.methodology ([a5ef404](https://github.com/Ditto190/claude-prompts-mcp/commit/a5ef4043e23ee955209908694b012ac7d9983b88))
-* **frameworks:** retire the pre-rename methodology back-compat folds ([05b6efc](https://github.com/Ditto190/claude-prompts-mcp/commit/05b6efcb89bccc012a1fe0bc1f95f72ab80addee))
-* **frameworks:** route fallback defaults through DEFAULT_FRAMEWORK_ID ([b41adc4](https://github.com/Ditto190/claude-prompts-mcp/commit/b41adc438cd577e22663550c1055747f8fce761a))
-* **gates:** delete the gate retry re-entry API, which had no callers ([7a43f99](https://github.com/Ditto190/claude-prompts-mcp/commit/7a43f996d4d822391d8f271bcf0a253c82198a71))
-* **gates:** delete the unreachable enforcement-decision cache ([335a8b6](https://github.com/Ditto190/claude-prompts-mcp/commit/335a8b6801431804b724c8321d16bd3e97c47f8a))
-* **gates:** move the shell-verify clearing decision to its owner module ([20b795e](https://github.com/Ditto190/claude-prompts-mcp/commit/20b795e7364032e8658d2b5a675c22ca00c238b6))
-* **mcp-tools:** delete the dead ContextBuilder rather than consolidate it ([05ab145](https://github.com/Ditto190/claude-prompts-mcp/commit/05ab145e26b6fda7b4aaccb3f0add62085806922))
-* **mcp-tools:** delete the system_control tool-description sink ([0ad5769](https://github.com/Ditto190/claude-prompts-mcp/commit/0ad5769ec65043aa0ccb64226ba486ae9adabd70))
-* **mcp-tools:** drop dead wiring from the tool constructor seams ([6642c04](https://github.com/Ditto190/claude-prompts-mcp/commit/6642c049586b6ac7990fa5b133c6d0f080de4e39))
-* **mcp-tools:** drop unreachable saveVersion failure branch ([d2d7724](https://github.com/Ditto190/claude-prompts-mcp/commit/d2d77245d02e25a19e90a622c5ce37cc9b2a3b9c))
-* **pipeline:** construct the pipeline from an ordered stage array ([094baec](https://github.com/Ditto190/claude-prompts-mcp/commit/094baec62523e99ae86f73191661696e81917f95))
-* **pipeline:** delete DependencyInjectionStage and the metadata bag ([af8401a](https://github.com/Ditto190/claude-prompts-mcp/commit/af8401ada25dea7e827a9409647a127f1d43d21a))
-* **pipeline:** delete the two judge-selection channels that never had a producer ([76630b7](https://github.com/Ditto190/claude-prompts-mcp/commit/76630b735f6ac8dd7df5a43c2fb7633e355de2cb))
-* **pipeline:** drain the execution context metadata bag to one key ([b29dff2](https://github.com/Ditto190/claude-prompts-mcp/commit/b29dff2b422252695d56d54b45a682d29687be0f))
-* **pipeline:** enforce stage ordering invariants at construction ([f858306](https://github.com/Ditto190/claude-prompts-mcp/commit/f8583060deba345a033610a199722314fe706d2b))
-* **pipeline:** extract execution metric payload derivation ([b840472](https://github.com/Ditto190/claude-prompts-mcp/commit/b84047203d3ff0b3aefe0df30775608899bc3fc7))
-* **pipeline:** move framework-requirement predicates out of the stage ([a25aaf2](https://github.com/Ditto190/claude-prompts-mcp/commit/a25aaf256395c20ab04bab7ed0327a9ac504ffde))
-* **pipeline:** renumber the 22 stage files to execution order ([467ee5a](https://github.com/Ditto190/claude-prompts-mcp/commit/467ee5a45bb0d4293907f8267258bae1900b26b4))
-* **pipeline:** stop deriving the framework requirement twice ([6479ab1](https://github.com/Ditto190/claude-prompts-mcp/commit/6479ab155fbdba62ab16f924ec685142d0487901))
-* **prompts:** rename create_methodology to create_framework ([7d1c32e](https://github.com/Ditto190/claude-prompts-mcp/commit/7d1c32e6d291a746f750a3d3010e5cb51f269bb7))
-* **remotion:** rename methodology to framework in the tutorial video ([5808785](https://github.com/Ditto190/claude-prompts-mcp/commit/5808785258cb25d900188efb6deb9cd42f0fb682))
-* **runtime:** express the version_history cleanup as a schema bump, not resident code ([92b1dcd](https://github.com/Ditto190/claude-prompts-mcp/commit/92b1dcda8b7053bbbb1ec5ca9c760cf3da26e8a8))
-* **runtime:** extract list-change routing and cover both transports ([0f5437f](https://github.com/Ditto190/claude-prompts-mcp/commit/0f5437f6b3f912d3fd447bfd052510f138f602c9))
-* **scripts:** port no-crosslayer-relative to dependency-cruiser and retire the guard ([3837b91](https://github.com/Ditto190/claude-prompts-mcp/commit/3837b919bd938891d48a22ade6e082175c9c70e3))
-* **scripts:** retire four guards, re-home them, and share one definition of a live exception ([c4b920b](https://github.com/Ditto190/claude-prompts-mcp/commit/c4b920ba1ce8b885e5d6689d6dbed34225740392))
-* **scripts:** scope shipped-content gates by git, not filesystem walk ([8468c4a](https://github.com/Ditto190/claude-prompts-mcp/commit/8468c4a23891b409feace816f30837c1de088c40))
-* **server:** delete 11 unreachable types and the analyzer's unread config ([558e4dc](https://github.com/Ditto190/claude-prompts-mcp/commit/558e4dc8c8864f5c19e5b1e2606b73ff34934aa1))
-* **server:** delete the last nine unreachable types in shared/types ([675095f](https://github.com/Ditto190/claude-prompts-mcp/commit/675095fa5ff9389b25e2a923f5cc10fc16f327bc))
-* **server:** land finalized pipeline and framework remediation ([67e905e](https://github.com/Ditto190/claude-prompts-mcp/commit/67e905e49f2bfc8b045b7aa787738e70496fe75e))
-* **server:** migrate cross-layer imports to package.json subpath imports ([901081a](https://github.com/Ditto190/claude-prompts-mcp/commit/901081a144d9c79f5a5a4808f3bbd50d90cf4e65))
-* **server:** name the script-tool filter for triggers, not the retired mode field ([3ef5411](https://github.com/Ditto190/claude-prompts-mcp/commit/3ef541191de7c7ef90bfd4eaa50e83b54b7959af))
-* **server:** remove the 76 dead symbols the unused-locals sweep reported ([31dd755](https://github.com/Ditto190/claude-prompts-mcp/commit/31dd7555f39c1d72e675ad7ec3410ac172c38798))
-* **server:** retire the semantic LLM side client, which never ran here ([d219f8b](https://github.com/Ditto190/claude-prompts-mcp/commit/d219f8b75a982669142d301cae0512c272415ce3))
-* **server:** subpath imports + declared public API contract ([b05a181](https://github.com/Ditto190/claude-prompts-mcp/commit/b05a1815b9e13292fa97c8b03877435a412bd9fb))
-* **server:** type McpToolRouter's mcpServer as McpServer ([2ddd763](https://github.com/Ditto190/claude-prompts-mcp/commit/2ddd763fc46977631633b62572d31c2fa19fb67d))
-* **server:** type TransportRouter's mcpServer as McpServer ([4feaab2](https://github.com/Ditto190/claude-prompts-mcp/commit/4feaab29e93698eb24865f7dc924db48f4288eaa))
-
 
 ### Documentation
 
@@ -422,6 +413,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * retire delegation-contract plan and test roadmap as reference ([f2c0f12](https://github.com/Ditto190/claude-prompts-mcp/commit/f2c0f128131c7b435112b5152640fa709dee49aa))
 * **scripts:** cite the plan convention at a path every consumer can reach ([06ef228](https://github.com/Ditto190/claude-prompts-mcp/commit/06ef228e6389a2828b287f770cc6922744dbabf8))
 
+### ⚠ BREAKING CHANGES
+
+- **`session cancel` moved from `system_control` to `prompt_engine`.** Call `prompt_engine(chain_id:"chain-x#1", cancel:true)`; `system_control(action:"session", operation:"cancel")` now refuses and names the replacement. `list`, `inspect` and `clear` stay on `system_control`. **The id you hold decides the tool**: a `chain_id` is held _because you are running the chain_, so stopping that run is part of running it, while a `session_id` comes from a listing and acting on runs you are not in is operator work. The split had no rule before this, which is how `prompt_engine` came to own `force_restart` — a session-lifecycle mutation — while the verb it is built from lived on the other tool. `force_restart` is now documented as cancel-then-start, so the two abandonment verbs sit on one tool with one sentence separating them.
+- **`resource_manager` gains `source_workspace`**, a read-only cross-workspace history parameter. It is honoured by `history` and `compare` and **refused** by every other action, including `rollback`: a snapshot recorded in another workspace describes files that may not exist here, and version numbering is per-workspace. The refusal is deliberate — silently scoping the parameter back to local would leave the caller believing they had restored the other workspace's version.
+Both changes alter the reachable-shape union of the MCP tool surface, which this repository's Public API Contract prices as breaking.
+* **execution:** the rendered ==> handoff text — a client-observable prompt surface — changes shape entirely (brief-at-resume replaces CTA-at-preview).
+* **mcp-tools:** `system_control(action:"session", operation:"cancel")` is removed; call `prompt_engine(chain_id:"...", cancel:true)` instead. The removed operation now refuses with a message naming the replacement rather than reporting an unknown operation. `resource_manager` additionally accepts `source_workspace`. Both alter the reachable-shape union of the MCP tool surface, which this repository's Public API Contract prices as breaking.
+* **prompts:** chain steps are validated strictly. A key with no schema field now fails the prompt's load, naming the key and its step index, instead of being silently discarded.
+* **mcp-tools:** `resource_manager(resource_type: "prompt", action: "delete")` now requires `confirm: true`, and the `checkpoint` resource type and `clear` action are removed from the tool surface.
+* **chains:** schema v20 renames chain_sessions.tenant_id and chain_run_registry.tenant_id to run_owner_pid, and drops `lifecycle` from v_execution_status. Both tables are derived/ephemeral and are dropped by the bump, so no data migrates.
+* **runtime:** `--transport=sse` and `transport: "sse"` in config.json are rejected at startup rather than silently resolved to another transport. Use `streamable-http`.
+* **runtime:** The deprecated HTTP+SSE transport is removed; use `--transport=streamable-http`. The Streamable HTTP transport no longer issues or requires an `Mcp-Session-Id` header.
+* **deps:** the published MCP inputSchema changed in 39 places. The SDK picks its JSON Schema converter from the installed zod major (zod-json-schema-compat.js:19-28), so this bump swaps the engine that produces the tool surface CLAUDE.md places inside the Public API Contract. The plan pre-committed the rule "empty diff -> minor, non-empty -> major" before the diff was taken; it is non-empty.
+* **server:** the project is re-licensed from AGPL-3.0-only to MIT. Network use of modified versions no longer triggers the source-disclosure obligation of AGPL section 13; MIT imposes attribution only. Skills already exported by `skills:export` carry the old AGPL-3.0-only license field and must be regenerated to pick up MIT.
+* **mcp-tools:** resource_manager parameter `methodology` is now `framework`; FrameworkCreationData.methodology removed and `type` is now required.
+* **frameworks:** FrameworkDefinition.methodology removed; use `type`.
+* resource://methodology/ is now resource://framework/.
+* **prompts:** `>>create_methodology` is now `>>create_framework`.
 
 ### Maintenance
 
@@ -434,32 +443,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### ⚠ BREAKING CHANGES
 
-- **`session cancel` moved from `system_control` to `prompt_engine`.** Call `prompt_engine(chain_id:"chain-x#1", cancel:true)`; `system_control(action:"session", operation:"cancel")` now refuses and names the replacement. `list`, `inspect` and `clear` stay on `system_control`. **The id you hold decides the tool**: a `chain_id` is held _because you are running the chain_, so stopping that run is part of running it, while a `session_id` comes from a listing and acting on runs you are not in is operator work. The split had no rule before this, which is how `prompt_engine` came to own `force_restart` — a session-lifecycle mutation — while the verb it is built from lived on the other tool. `force_restart` is now documented as cancel-then-start, so the two abandonment verbs sit on one tool with one sentence separating them.
-- **`resource_manager` gains `source_workspace`**, a read-only cross-workspace history parameter. It is honoured by `history` and `compare` and **refused** by every other action, including `rollback`: a snapshot recorded in another workspace describes files that may not exist here, and version numbering is per-workspace. The refusal is deliberate — silently scoping the parameter back to local would leave the caller believing they had restored the other workspace's version.
-
-Both changes alter the reachable-shape union of the MCP tool surface, which this repository's Public API Contract prices as breaking.
-
-### Added
-
-- **`dry_run` previews `rollback` and `delete`** on prompts, gates and frameworks, in addition to prompt `update`. A preview writes no file and records no version, and still refuses a version whose snapshot is incomplete, so the preview and the real call agree. A `delete` preview names what would be removed — for a prompt, the prompts that reference it.
-- **`resource_manager` and `system_control` advertise `destructiveHint`**, and `prompt_engine` advertises that it is not destructive, so clients can gate destructive actions where the operator is.
-- **Phase-guard section headers are now declared to the model, derived live from `phases.yaml`.** Chain steps and gated single prompts (any prompt carrying an explicit `gates` parameter, a `gate` operator, or `chainSteps`) render the section-header vocabulary — and the declarable subset of its guard criteria (`contains_any`, `contains_all`, `max_length`) — from the same source the phase-guard evaluator grades against, replacing five hand-maintained prompt copies as the source of truth. Negative criteria (`forbidden_terms`, `matches_pattern`) are never declared to the model; the type system rejects a criterion that tries. A framework that declares `guards` on a phase with no `section_header` is now refused at load, naming the offending phase. `validate:phase-header-drift` catches a prompt file that restates a header its framework no longer declares.
-
-### Changed
-
-- **Destructive `resource_manager` actions are denied by one guard** ahead of dispatch rather than by six hand-written checks across the processors. `prompt delete` keeps its own refusal because that one names the dependent prompts that would break.
-
-### Fixed
-
-- **A phase guard can no longer block on a section header the executing prompt was never told to produce.** Previously the guard graded every `phases.yaml` header regardless of whether the rendered prompt actually asked for it, so a header rename in `phases.yaml` silently created an unsatisfiable review loop — reproduced live on this repository's own planning chain. A header the prompt did not declare is now advisory only; enforcement of a declared-and-missing header is unchanged.
-- **Gate and framework version history now records the state each edit produced**, matching prompts. Previously version N held the state edit N _replaced_, so the state currently on disk was recorded in no row at all and was not rollback-reachable until the next edit. A self-healing bridge row carries existing rows across the change with no migration.
-- **Rollback restores the recorded snapshot exactly instead of merging current values into it.** A version whose snapshot cannot rebuild the resource is now refused, naming the missing fields; substituting the live value landed the resource on a state matching neither the target version nor the state before it, under a message saying version N had been restored. Where a rollback legitimately leaves part of a resource untouched — fields resolved through the category chain, a framework field the version never recorded, script tools under `tools/{id}/` — the response now names what it did not restore.
-- **A rollback refused for any reason no longer writes version rows.** Rollback runs validate → record → write, with recording ahead of the file write so a persistence failure aborts with nothing on disk.
-- **A gate or framework edit no longer writes a spurious bridge row every time.** Snapshot projections are emitted in a canonical key order, because the bridge check is `JSON.stringify` equality and was therefore order-sensitive; steady state is one row per edit again.
-- **`cpm rollback` no longer destroys resource fields.** It wrote the recorded snapshot as the entire entry YAML, so rolling a gate back through the CLI deleted `pass_criteria`, `retry_config`, `activation` and `guidanceFile` and injected a bogus `guidance` key — the CLI and the server produced different files from the same version. The snapshot is now merged over what is on disk, and `cpm rollback style` is refused up front rather than cast into a resource type that has no version history.
-- **`resource_manager framework update description:"…"` was a silent no-op.** The value was accepted, diffed and reported, but never written; the old description survived because the framework writer merges over the existing YAML.
 
 ## [4.0.1](https://github.com/minipuft/claude-prompts-mcp/compare/v4.0.0...v4.0.1) (2026-08-16)
 
